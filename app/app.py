@@ -11,7 +11,7 @@ app = Flask(__name__)
 auth = HTTPBasicAuth()
 
 # Configure logging to display messages at INFO level and above
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 # Set the upload folder where images will be saved
 UPLOAD_FOLDER = '/tmp/uploads'  # Update to a writable directory
@@ -47,7 +47,6 @@ def verify_password(username, password):
 def log_request():
     app.logger.info(f"Request Method: {request.method}, Path: {request.path}")
     app.logger.info(f"Request Headers: {request.headers}")
-    app.logger.info(f"Request Data: {request.data}")
 
 @app.route('/')
 def home():
@@ -135,8 +134,6 @@ def cgi_notify():
     # Log incoming request details
     app.logger.info(f"Request Headers: {request.headers}")
     app.logger.info(f"Request Content-Type: {request.content_type}")
-    app.logger.info(f"Request Form Data: {request.form}")
-    app.logger.info(f"Request Data (raw): {request.data[:500]}")
 
     if request.method == 'GET':
         app.logger.info("Camera sent a GET request to /cgi-bin/notify.cgi")

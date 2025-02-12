@@ -38,7 +38,7 @@ spec:
         - name: container
           image: 'image-registry.openshift-image-registry.svc:5000/<NAMESPACE>/image-upload@latest'
           ports:
-            - containerPort: 8501
+            - containerPort: 5000
               protocol: TCP
           env:
             - name: USERNAME

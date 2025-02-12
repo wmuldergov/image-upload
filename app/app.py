@@ -60,7 +60,7 @@ def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
-@app.route('/upload', methods=['POST'])
+@app.route('/upload', methods=['POST', 'GET',  'PUT'])
 @auth.login_required  # Protect this route with Basic Authentication
 def upload_file():
     # Check if the request contains a file

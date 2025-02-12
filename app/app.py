@@ -11,7 +11,7 @@ app = Flask(__name__)
 auth = HTTPBasicAuth()
 
 # Configure logging to display messages at INFO level and above
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 # Set the upload folder where images will be saved
 UPLOAD_FOLDER = '/tmp/uploads'  # Update to a writable directory
@@ -127,9 +127,11 @@ def upload_file():
 @app.route('/cgi-bin/notify.cgi', methods=['POST'])
 def cgi_notify():
     # Log the incoming request to see the structure
-    app.logger.info(f"Request Data: {request.form}")
-    app.logger.info(f"Request Files: {request.files}")
-    
+    app.logger.info(f"Request Headers: {request.headers}")
+    app.logger.info(f"Request Content-Type: {request.content_type}")
+    app.logger.info(f"Request Form Data: {request.form}")
+    app.logger.info(f"Request Data (raw): {request.data[:500]}")
+
     # Handle the request from the camera (similar to how CGI scripts work)
     if 'file' not in request.files:
         app.logger.error('No file part in the request')

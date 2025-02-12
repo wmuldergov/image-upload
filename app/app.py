@@ -132,7 +132,7 @@ def upload_file():
 # Add the CGI-like route here for the AXIS camera
 @app.route('/cgi-bin/notify.cgi', methods=['GET', 'POST'])
 def cgi_notify():
-    # Log the incoming request to see the structure
+    # Log incoming request details
     app.logger.info(f"Request Headers: {request.headers}")
     app.logger.info(f"Request Content-Type: {request.content_type}")
     app.logger.info(f"Request Form Data: {request.form}")
@@ -142,65 +142,63 @@ def cgi_notify():
         app.logger.info("Camera sent a GET request to /cgi-bin/notify.cgi")
         return jsonify({"message": "Camera connected successfully. Use POST to upload images."}), 200
 
-    # Handle the request from the camera (similar to how CGI scripts work)
-    if 'file' not in request.files:
+    # Check if request is a standard multipart form upload
+    if 'file' in request.files:
+        file = request.files['file']
+        if file.filename == '':
+            app.logger.error('No selected file')
+            return 'No selected file', 400
+        
+        filename = secure_filename(file.filename)
+        image_data = file.read()  # Read image data from the file object
+
+    # Handle raw binary image upload (for camera)
+    elif request.content_type and request.content_type.startswith('image/'):
+        image_data = request.data  # Read raw image bytes from request body
+        filename = f"upload_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+        app.logger.info(f"Camera uploaded raw image, saving as {filename}")
+
+    else:
         app.logger.error('No file part in the request')
         return 'No file part', 400
 
-    file = request.files['file']
-    
-    # If no file is selected
-    if file.filename == '':
-        app.logger.error('No selected file')
-        return 'No selected file', 400
-    
-    # Check if the file has an allowed extension
-    if file and allowed_file(file.filename):
-        # Save the file to the upload folder
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
+    # Save the image
+    image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    with open(image_path, 'wb') as f:
+        f.write(image_data)
 
-        # Keep a copy of the original image
-        original_image_path = os.path.join(app.config['UPLOAD_FOLDER'], f'original_{filename}')
-        os.rename(filepath, original_image_path)
+    # Keep a copy of the original image
+    original_image_path = os.path.join(app.config['UPLOAD_FOLDER'], f'original_{filename}')
+    os.rename(image_path, original_image_path)
 
-        # Create a new image that is resized and add watermark
-        watermark_filename = f"{filename.rsplit('.', 1)[0]}-watermarked.jpg"
-        watermark_filepath = os.path.join(app.config['UPLOAD_FOLDER'], watermark_filename)
+    # Create a new image that is resized and add watermark
+    watermark_filename = f"{filename.rsplit('.', 1)[0]}-watermarked.jpg"
+    watermark_filepath = os.path.join(app.config['UPLOAD_FOLDER'], watermark_filename)
+
+    # Open the image and apply resizing and watermark
+    with Image.open(original_image_path) as img:
+        # Resize the image to 800x468
+        img_resized = img.resize((800, 468))
+
+        # Create a watermark with the current timestamp
+        draw = ImageDraw.Draw(img_resized)
+        font = ImageFont.load_default()  # Change this if needed
         
-        # Open the image and apply resizing and watermark
-        with Image.open(original_image_path) as img:
-            # Resize the image to 800x468
-            img_resized = img.resize((800, 468))
+        # Add watermark text at the bottom
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        bbox = draw.textbbox((0, 0), timestamp, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        position = (img_resized.width - text_width - 10, img_resized.height - text_height - 10)
+        draw.text(position, timestamp, fill="white", font=font)
 
-            # Create a watermark with the current timestamp
-            draw = ImageDraw.Draw(img_resized)
-            font = ImageFont.load_default()  # You can choose a different font here if desired
-            
-            # Add watermark text at the bottom
-            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            
-            # Use textbbox (bounding box for text) instead of textsize
-            bbox = draw.textbbox((0, 0), timestamp, font=font)
-            text_width = bbox[2] - bbox[0]
-            text_height = bbox[3] - bbox[1]
-            
-            # Position the watermark at the bottom-right
-            position = (img_resized.width - text_width - 10, img_resized.height - text_height - 10)
-            
-            draw.text(position, timestamp, fill="white", font=font)
+        # Save the new image with watermark
+        img_resized.save(watermark_filepath)
 
-            # Save the new image with watermark
-            img_resized.save(watermark_filepath)
+    # Log successful file upload and processing
+    app.logger.info(f'File uploaded and processed successfully: {watermark_filename}')
 
-        # Log successful file upload and processing
-        app.logger.info(f'File uploaded and processed successfully: {watermark_filename}')
-
-        # Return a success message
-        return 'File uploaded and processed successfully', 200
-
-    return 'Invalid file type', 400
+    return 'File uploaded and processed successfully', 200
 
 if __name__ == '__main__':
     app.run(debug=True)

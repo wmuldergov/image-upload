@@ -126,6 +126,10 @@ def upload_file():
 # Add the CGI-like route here for the AXIS camera
 @app.route('/cgi-bin/notify.cgi', methods=['POST'])
 def cgi_notify():
+    # Log the incoming request to see the structure
+    app.logger.info(f"Request Data: {request.form}")
+    app.logger.info(f"Request Files: {request.files}")
+    
     # Handle the request from the camera (similar to how CGI scripts work)
     if 'file' not in request.files:
         app.logger.error('No file part in the request')

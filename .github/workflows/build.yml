@@ -1,0 +1,41 @@
+name: Build & Deploy Image to OpenShift
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build & Push Image
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Build Image
+      id: build_image
+      uses: redhat-actions/buildah-build@v2
+      with:
+        context: .
+        layers: true
+        image: image-upload
+        tags: latest
+        labels: |
+          app=image-upload
+        containerfiles: ./Dockerfile
+
+    - name: Install CLI tools from OpenShift Mirror
+      uses: redhat-actions/openshift-tools-installer@v1
+      with:
+        oc: "4"
+
+    - name: Push to OpenShift ImageStream
+      uses: redhat-actions/push-to-registry@v2
+      with:
+        image: ${{ steps.build_image.outputs.image }}
+        tags: latest
+        registry: ${{ vars.OPENSHIFT_IMAGESTREAM_URL }}
+        username: ${{ secrets.OPENSHIFT_IMAGESTREAM_USERNAME }}
+        password: ${{ secrets.OPENSHIFT_IMAGESTREAM_TOKEN }}

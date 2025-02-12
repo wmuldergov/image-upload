@@ -11,7 +11,7 @@ auth = HTTPBasicAuth()
 logging.basicConfig(level=logging.INFO)
 
 # Set the upload folder where images will be saved
-UPLOAD_FOLDER = 'uploads'
+UPLOAD_FOLDER = '/tmp/uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Ensure the upload folder exists

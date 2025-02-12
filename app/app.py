@@ -43,6 +43,12 @@ def verify_password(username, password):
         app.logger.error(f"Unauthorized access attempt with username: {username}")
         return None  # Will trigger a 401 Unauthorized response
 
+@app.before_request
+def log_request():
+    app.logger.info(f"Request Method: {request.method}, Path: {request.path}")
+    app.logger.info(f"Request Headers: {request.headers}")
+    app.logger.info(f"Request Data: {request.data}")
+
 @app.route('/')
 def home():
     image_files = [f for f in os.listdir(app.config['UPLOAD_FOLDER']) if allowed_file(f)]

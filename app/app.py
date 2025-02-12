@@ -130,13 +130,17 @@ def upload_file():
 
 
 # Add the CGI-like route here for the AXIS camera
-@app.route('/cgi-bin/notify.cgi', methods=['POST'])
+@app.route('/cgi-bin/notify.cgi', methods=['GET', 'POST'])
 def cgi_notify():
     # Log the incoming request to see the structure
     app.logger.info(f"Request Headers: {request.headers}")
     app.logger.info(f"Request Content-Type: {request.content_type}")
     app.logger.info(f"Request Form Data: {request.form}")
     app.logger.info(f"Request Data (raw): {request.data[:500]}")
+
+    if request.method == 'GET':
+        app.logger.info("Camera sent a GET request to /cgi-bin/notify.cgi")
+        return jsonify({"message": "Camera connected successfully. Use POST to upload images."}), 200
 
     # Handle the request from the camera (similar to how CGI scripts work)
     if 'file' not in request.files:

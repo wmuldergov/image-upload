@@ -52,80 +52,13 @@ def log_request():
 def home():
     image_files = [f for f in os.listdir(app.config['UPLOAD_FOLDER']) if allowed_file(f)]
     
-    # Option 1: Return filenames as JSON
-    # return jsonify(image_files)
-    
-    # Option 2: Display images in HTML
+    # Display images in HTML
     image_tags = ''.join([f'<img src="/uploads/{f}" alt="{f}" width="200" height="auto">' for f in image_files])
     return f'<h1>Uploaded Images</h1>{image_tags}'
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-
-
-@app.route('/upload', methods=['POST'])
-@auth.login_required  # Protect this route with Basic Authentication
-def upload_file():
-    # Check if the request contains a file
-    if 'file' not in request.files:
-        app.logger.error('No file part in the request')
-        return jsonify({'error': 'No file part'}), 400
-
-    file = request.files['file']
-    
-    # If no file is selected
-    if file.filename == '':
-        app.logger.error('No selected file')
-        return jsonify({'error': 'No selected file'}), 400
-    
-    # Check if the file has an allowed extension
-    if file and allowed_file(file.filename):
-        # Save the file to the upload folder
-        original_filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-        file.save(original_filepath)
-
-        # Keep a copy of the original image
-        original_image_path = os.path.join(app.config['UPLOAD_FOLDER'], f'original_{file.filename}')
-        os.rename(original_filepath, original_image_path)
-
-        # Create a new image that is resized and add watermark
-        watermark_filename = f"{file.filename.rsplit('.', 1)[0]}-watermarked.jpg"
-        watermark_filepath = os.path.join(app.config['UPLOAD_FOLDER'], watermark_filename)
-        
-        # Open the image and apply resizing and watermark
-        with Image.open(original_image_path) as img:
-            # Resize the image to 800x468
-            img_resized = img.resize((800, 468))
-
-            # Create a watermark with the current timestamp
-            draw = ImageDraw.Draw(img_resized)
-            font = ImageFont.load_default()  # You can choose a different font here if desired
-            
-            # Add watermark text at the bottom
-            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            
-            # Use textbbox (bounding box for text) instead of textsize
-            bbox = draw.textbbox((0, 0), timestamp, font=font)
-            text_width = bbox[2] - bbox[0]
-            text_height = bbox[3] - bbox[1]
-            
-            # Position the watermark at the bottom-right
-            position = (img_resized.width - text_width - 10, img_resized.height - text_height - 10)
-            
-            draw.text(position, timestamp, fill="white", font=font)
-
-            # Save the new image with watermark
-            img_resized.save(watermark_filepath)
-
-        # Log successful file upload and processing
-        app.logger.info(f'File uploaded and processed successfully: {watermark_filename}')
-
-        # Return a success message
-        return jsonify({'message': 'File uploaded and processed successfully', 'filename': watermark_filename}), 200
-    else:
-        app.logger.error(f'Invalid file type: {file.filename}')
-        return jsonify({'error': 'Invalid file type'}), 400
 
 
 # Add the CGI-like route here for the AXIS camera
@@ -139,20 +72,31 @@ def cgi_notify():
         app.logger.info("Camera sent a GET request to /cgi-bin/notify.cgi")
         return jsonify({"message": "Camera connected successfully. Use POST to upload images."}), 200
 
-    # Check if request is a standard multipart form upload
+    # Try to extract filename from Content-Disposition header
+    filename = None
+    content_disposition = request.headers.get('Content-Disposition', '')
+    if content_disposition:
+        match = re.search(r'filename="(.+?)"', content_disposition)
+        if match:
+            filename = secure_filename(match.group(1))
+
+    # Handle multipart/form-data uploads
     if 'file' in request.files:
         file = request.files['file']
         if file.filename == '':
             app.logger.error('No selected file')
             return 'No selected file', 400
         
-        filename = secure_filename(file.filename)
-        image_data = file.read()  # Read image data from the file object
+        if not filename:
+            filename = secure_filename(file.filename)  # Use provided filename if no header filename
+
+        image_data = file.read()  # Read image data from file object
 
     # Handle raw binary image upload (for camera)
     elif request.content_type and request.content_type.startswith('image/'):
         image_data = request.data  # Read raw image bytes from request body
-        filename = f"upload_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+        if not filename:
+            filename = f"upload_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
         app.logger.info(f"Camera uploaded raw image, saving as {filename}")
 
     else:
@@ -165,8 +109,8 @@ def cgi_notify():
         f.write(image_data)
 
     # Keep a copy of the original image
-    original_image_path = os.path.join(app.config['UPLOAD_FOLDER'], f'original_{filename}')
-    os.rename(image_path, original_image_path)
+    original_image_path = os.path.join(app.config['UPLOAD_FOLDER'], f'original-{filename}')
+    os.replace(image_path, original_image_path)
 
     # Create a new image that is resized and add watermark
     watermark_filename = f"{filename.rsplit('.', 1)[0]}-watermarked.jpg"
@@ -177,25 +121,55 @@ def cgi_notify():
         # Resize the image to 800x468
         img_resized = img.resize((800, 468))
 
-        # Create a watermark with the current timestamp
-        draw = ImageDraw.Draw(img_resized)
-        font = ImageFont.load_default()  # Change this if needed
-        
-        # Add watermark text at the bottom
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        bbox = draw.textbbox((0, 0), timestamp, font=font)
-        text_width = bbox[2] - bbox[0]
-        text_height = bbox[3] - bbox[1]
-        position = (img_resized.width - text_width - 10, img_resized.height - text_height - 10)
-        draw.text(position, timestamp, fill="white", font=font)
+        # Calculate new height with the black bar
+        new_height = img_resized.height + 20
 
-        # Save the new image with watermark
-        img_resized.save(watermark_filepath)
+        # Create a new image with the added space
+        new_img = Image.new("RGB", (img_resized.width, new_height), "black")  # Black background
+
+        # Paste the resized image onto the new image (at the top)
+        new_img.paste(img_resized, (0, 0))
+
+        draw = ImageDraw.Draw(new_img)
+
+        # Load a larger font for the timestamp
+        try:
+            large_font = ImageFont.truetype("arial.ttf", size=14)  # Adjust path and font as needed.
+        except IOError:
+            print("Timestamp font not found. Using default.")
+            large_font = ImageFont.load_default()
+
+        # Load a font for "DriveBC.ca" (can be the same or different)
+        try:
+            drivebc_font = ImageFont.truetype("arial.ttf", size=14)  # Adjust path and font size as needed.
+        except IOError:
+            print("DriveBC font not found. Using default.")
+            drivebc_font = ImageFont.load_default()
+
+        timestamp = datetime.datetime.now().strftime("%b %d, %Y %I:%M:%S %p")
+
+        # Timestamp position (right side)
+        timestamp_bbox = draw.textbbox((0, 0), timestamp, font=large_font)
+        timestamp_width = timestamp_bbox[2] - timestamp_bbox[0]
+        timestamp_height = timestamp_bbox[3] - timestamp_bbox[1]
+        timestamp_position = (new_img.width - timestamp_width - 10, new_img.height - timestamp_height - 8)
+
+        # "DriveBC.ca" position (left side)
+        drivebc_bbox = draw.textbbox((0, 0), "DriveBC.ca", font=drivebc_font)
+        drivebc_width = drivebc_bbox[2] - drivebc_bbox[0]
+        drivebc_height = drivebc_bbox[3] - drivebc_bbox[1]
+        drivebc_position = (10, new_img.height - drivebc_height - 8)  # 10px from left and bottom
+
+        draw.text(timestamp_position, timestamp, fill="white", font=large_font)
+        draw.text(drivebc_position, "DriveBC.ca", fill="white", font=drivebc_font)
+
+        new_img.save(watermark_filepath)
 
     # Log successful file upload and processing
     app.logger.info(f'File uploaded and processed successfully: {watermark_filename}')
 
     return 'File uploaded and processed successfully', 200
+
 
 if __name__ == '__main__':
     app.run(debug=True)

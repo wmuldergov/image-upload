@@ -44,9 +44,30 @@ def verify_password(username, password):
         return None  # Will trigger a 401 Unauthorized response
 
 @app.before_request
-def log_request():
-    app.logger.info(f"Request Method: {request.method}, Path: {request.path}")
-    app.logger.info(f"Request Headers: {request.headers}")
+def log_full_request():
+    from pprint import pformat  # for pretty-printing dicts
+
+    log_data = {
+        "method": request.method,
+        "url": request.url,
+        "base_url": request.base_url,
+        "path": request.path,
+        "full_path": request.full_path,
+        "query_string": request.query_string.decode(),
+        "headers": dict(request.headers),
+        "content_type": request.content_type,
+        "content_length": request.content_length,
+        "mimetype": request.mimetype,
+        "remote_addr": request.remote_addr,
+        "user_agent": str(request.user_agent),
+        "cookies": request.cookies,
+        "args (query params)": request.args.to_dict(),
+        "form data": request.form.to_dict(),
+        "json body": request.get_json(silent=True),
+        "files": list(request.files.keys())
+    }
+
+    app.logger.info(f"Full Request Info:\n{pformat(log_data)}")
 
 @app.route('/')
 def home():

@@ -60,10 +60,7 @@ def check_auth_header():
     if request.path == "/cgi-bin/notify.cgi":
         if not request.authorization:
             app.logger.warning("Missing Authorization header!")
-            return Response(
-                "Authentication bypassed for testing", 200,
-                {'Content-Type': 'text/plain'}
-            )
+            return 'OK', 200, {'Content-Type': 'text/plain'}
 
 @app.after_request
 def log_response(response):

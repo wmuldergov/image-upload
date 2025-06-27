@@ -48,6 +48,15 @@ def verify_password(username, password):
 def log_request():
     app.logger.info(f"Request Method: {request.method}, Path: {request.path}")
     app.logger.info(f"Request Headers: {request.headers}")
+def check_auth_header():
+    # Only check for specific routes that should be protected
+    if request.path == "/cgi-bin/notify.cgi":
+        if not request.authorization:
+            app.logger.warning("Missing Authorization header!")
+            return Response(
+                "Authentication required", 401,
+                {'WWW-Authenticate': 'Basic realm="Login Required"'}
+            )
 
 @app.after_request
 def log_response(response):
@@ -82,6 +91,7 @@ def uploaded_file(filename):
 
 # Add the CGI-like route here for the AXIS camera
 @app.route('/cgi-bin/notify.cgi', methods=['GET', 'POST'])
+@auth.login_required
 def cgi_notify():
     # Log incoming request details
     app.logger.info(f"Request Headers: {request.headers}")

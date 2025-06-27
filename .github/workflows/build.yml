@@ -30,6 +30,7 @@ jobs:
       uses: redhat-actions/openshift-tools-installer@v1
       with:
         oc: "4"
+        skip_cache: true
 
     - name: Push to OpenShift ImageStream
       uses: redhat-actions/push-to-registry@v2

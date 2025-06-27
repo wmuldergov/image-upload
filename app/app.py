@@ -44,30 +44,27 @@ def verify_password(username, password):
         return None  # Will trigger a 401 Unauthorized response
 
 @app.before_request
-def log_full_request():
-    from pprint import pformat  # for pretty-printing dicts
+def log_request():
+    app.logger.info(f"Request Method: {request.method}, Path: {request.path}")
+    app.logger.info(f"Request Headers: {request.headers}")
 
-    log_data = {
-        "method": request.method,
-        "url": request.url,
-        "base_url": request.base_url,
-        "path": request.path,
-        "full_path": request.full_path,
-        "query_string": request.query_string.decode(),
-        "headers": dict(request.headers),
-        "content_type": request.content_type,
-        "content_length": request.content_length,
-        "mimetype": request.mimetype,
-        "remote_addr": request.remote_addr,
-        "user_agent": str(request.user_agent),
-        "cookies": request.cookies,
-        "args (query params)": request.args.to_dict(),
-        "form data": request.form.to_dict(),
-        "json body": request.get_json(silent=True),
-        "files": list(request.files.keys())
-    }
+@app.after_request
+def log_response(response):
+    app.logger.info(f"Response Status: {response.status}")
+    app.logger.info(f"Response Headers: {dict(response.headers)}")
 
-    app.logger.info(f"Full Request Info:\n{pformat(log_data)}")
+    # Log response body safely (if it's small)
+    if response.direct_passthrough:
+        app.logger.info("Response body not logged (direct_passthrough is enabled).")
+    else:
+        try:
+            body = response.get_data(as_text=True)
+            app.logger.info(f"Response Body:\n{body}")
+        except Exception as e:
+            app.logger.warning(f"Could not read response body: {e}")
+    
+    return response
+
 
 @app.route('/')
 def home():

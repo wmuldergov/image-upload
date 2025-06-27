@@ -48,6 +48,8 @@ def verify_password(username, password):
 def log_request():
     app.logger.info(f"Request Method: {request.method}, Path: {request.path}")
     app.logger.info(f"Request Headers: {request.headers}")
+    auth = request.headers.get('Authorization')
+    app.logger.info(f"Raw Authorization header: {auth}")
 def check_auth_header():
     # Only check for specific routes that should be protected
     if request.path == "/cgi-bin/notify.cgi":

@@ -68,8 +68,8 @@ def check_auth_header():
         if not request.authorization:
             app.logger.warning("Missing Authorization header!")
             return Response(
-                "Authentication bypassed for testing", 401,
-                {'Content-Type': 'text/plain'}
+                "Authentication required", 401,
+                {'WWW-Authenticate': 'Basic realm="Login Required"'}
             )
 
 @app.after_request

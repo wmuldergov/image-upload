@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, Response
 from flask_httpauth import HTTPBasicAuth
 from PIL import Image, ImageDraw, ImageFont
 import os
@@ -6,6 +6,7 @@ import logging
 import datetime
 from werkzeug.utils import secure_filename
 import re
+
 
 # Initialize Flask app and Basic Auth
 app = Flask(__name__)

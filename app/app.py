@@ -12,7 +12,10 @@ app = Flask(__name__)
 auth = HTTPBasicAuth()
 
 # Configure logging to display messages at INFO level and above
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s: %(message)s'
+)
 
 # Set the upload folder where images will be saved
 UPLOAD_FOLDER = '/tmp/uploads'  # Update to a writable directory

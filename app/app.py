@@ -56,11 +56,21 @@ def log_request():
     app.logger.info(f"Raw Authorization header: {auth}")
 @app.before_request
 def check_auth_header():
-    # Only check for specific routes that should be protected
     if request.path == "/cgi-bin/notify.cgi":
+        # Force reading of the full body *before* returning
+        try:
+            _ = request.get_data()  # This fully reads the stream
+            app.logger.info("Request body fully read for notify.cgi")
+        except Exception as e:
+            app.logger.error(f"Failed to read request body: {e}")
+            return "Error reading request body", 500
+
         if not request.authorization:
             app.logger.warning("Missing Authorization header!")
-            return 'OK', 200, {'Content-Type': 'text/plain'}
+            return Response(
+                "Authentication bypassed for testing", 200,
+                {'Content-Type': 'text/plain'}
+            )
 
 @app.after_request
 def log_response(response):

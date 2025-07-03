@@ -6,6 +6,7 @@ import logging
 import datetime
 from werkzeug.utils import secure_filename
 import re
+from zoneinfo import ZoneInfo
 
 
 # Initialize Flask app and Basic Auth
@@ -189,7 +190,8 @@ def cgi_notify():
             print("DriveBC font not found. Using default.")
             drivebc_font = ImageFont.load_default()
 
-        timestamp = datetime.datetime.now().strftime("%b %d, %Y %I:%M:%S %p")
+        pacific_now = datetime.datetime.now(ZoneInfo("America/Los_Angeles"))
+        timestamp = pacific_now.strftime("%b %d, %Y %I:%M:%S %p")
 
         # Timestamp position (right side)
         timestamp_bbox = draw.textbbox((0, 0), timestamp, font=large_font)

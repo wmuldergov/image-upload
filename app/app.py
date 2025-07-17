@@ -57,7 +57,7 @@ def log_request():
     app.logger.info(f"Request Headers: {request.headers}")
     auth = request.headers.get('Authorization')
     app.logger.info(f"Raw Authorization header: {auth}")
-@app.before_request
+#@app.before_request
 #def check_auth_header():
 #    if request.path == "/cgi-bin/notify.cgi":
 #        if not request.authorization:

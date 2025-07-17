@@ -130,9 +130,13 @@ def cgi_notify():
 
         image_data = file.read()  # Read image data from file object
 
-    # Handle raw binary image upload (for camera)
     elif request.content_type and request.content_type.startswith('image/'):
-        image_data = request.data  # Read raw image bytes from request body
+        try:
+            image_data = request.get_data(parse_form_data=False)
+        except Exception as e:
+            app.logger.error(f"Failed to read request body: {e}")
+            return 'Failed to read image data', 500
+
         if not filename:
             filename = f"upload_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
         app.logger.info(f"Camera uploaded raw image, saving as {filename}")

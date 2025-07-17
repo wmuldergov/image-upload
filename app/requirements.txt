@@ -2,3 +2,4 @@ Flask
 flask-httpauth
 pillow
 gunicorn
+gevent

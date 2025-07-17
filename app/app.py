@@ -53,6 +53,7 @@ def verify_password(username, password):
 @app.before_request
 def log_request():
     app.logger.info(f"Request Method: {request.method}, Path: {request.path}")
+    app.logger.info(f"Request Content-Type: {request.content_type}")
     app.logger.info(f"Request Headers: {request.headers}")
     auth = request.headers.get('Authorization')
     app.logger.info(f"Raw Authorization header: {auth}")
@@ -61,6 +62,7 @@ def check_auth_header():
     if request.path == "/cgi-bin/notify.cgi":
         if not request.authorization:
             app.logger.warning("Missing Authorization header!")
+            time.sleep(1)  # Adding a delay to try reduce issues with certain cam retries
             return Response(
                 "Authentication required", 401,
                 {'WWW-Authenticate': 'Basic realm="Login Required"'}
@@ -101,11 +103,6 @@ def uploaded_file(filename):
 @app.route('/cgi-bin/notify.cgi', methods=['GET', 'POST'])
 @auth.login_required
 def cgi_notify():
-    # Log incoming request details
-    app.logger.info(f"Request Headers: {request.headers}")
-    app.logger.info(f"Request Content-Type: {request.content_type}")
-
-
     if request.method == 'GET':
         app.logger.info("Camera sent a GET request to /cgi-bin/notify.cgi")
         return jsonify({"message": "Camera connected successfully. Use POST to upload images."}), 200

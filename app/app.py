@@ -58,15 +58,14 @@ def log_request():
     auth = request.headers.get('Authorization')
     app.logger.info(f"Raw Authorization header: {auth}")
 @app.before_request
-def check_auth_header():
-    if request.path == "/cgi-bin/notify.cgi":
-        if not request.authorization:
-            app.logger.warning("Missing Authorization header!")
-            time.sleep(1)  # Adding a delay to try reduce issues with certain cam retries
-            return Response(
-                "Authentication required", 401,
-                {'WWW-Authenticate': 'Basic realm="Login Required"'}
-            )
+#def check_auth_header():
+#    if request.path == "/cgi-bin/notify.cgi":
+#        if not request.authorization:
+#            app.logger.warning("Missing Authorization header!")
+#            return Response(
+#                "Authentication required", 401,
+#                {'WWW-Authenticate': 'Basic realm="Login Required"'}
+#            )
 
 @app.after_request
 def log_response(response):
@@ -79,7 +78,7 @@ def log_response(response):
     else:
         try:
             body = response.get_data(as_text=True)
-            app.logger.info(f"Response Body:\n{body}")
+            app.logger.info(f"Response Body:\n{body}\n\n")
         except Exception as e:
             app.logger.warning(f"Could not read response body: {e}")
     

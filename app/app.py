@@ -67,6 +67,13 @@ def log_request():
 #                {'WWW-Authenticate': 'Basic realm="Login Required"'}
 #            )
 
+@app.before_request
+def reject_expect_header():
+    if request.headers.get('Expect', '').lower() == '100-continue':
+        # Optional: Log it or limit this check to specific endpoints
+        app.logger.warning("Rejecting request due to 'Expect: 100-continue' header.")
+        return Response("417 Expectation Failed", status=417)
+
 @app.after_request
 def log_response(response):
     app.logger.info(f"Response Status: {response.status}")

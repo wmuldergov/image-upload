@@ -17,4 +17,4 @@ COPY app/ /app/
 EXPOSE 5000
 
 # Run the Flask app when the container starts
-CMD ["gunicorn", "-b", "0.0.0.0:5000", "app:app"]
+CMD ["gunicorn", "--workers", "3", "--worker-class", "gevent", "--timeout", "90", "-b", "0.0.0.0:5000", "app:app"]

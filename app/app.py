@@ -55,23 +55,6 @@ def log_request():
     app.logger.info(f"Request Headers: {request.headers}")
     auth = request.headers.get('Authorization')
     app.logger.info(f"Raw Authorization header: {auth}")
-@app.before_request
-def check_auth_header():
-    if request.path == "/cgi-bin/notify.cgi":
-        # Force reading of the full body *before* returning
-        try:
-            _ = request.get_data()  # This fully reads the stream
-            app.logger.info("Request body fully read for notify.cgi")
-        except Exception as e:
-            app.logger.error(f"Failed to read request body: {e}")
-            return "Error reading request body", 500
-
-        if not request.authorization:
-            app.logger.warning("Missing Authorization header!")
-            return Response(
-                "Authentication required", 401,
-                {'WWW-Authenticate': 'Basic realm="Login Required"'}
-            )
 
 @app.after_request
 def log_response(response):
@@ -111,6 +94,17 @@ def cgi_notify():
     # Log incoming request details
     app.logger.info(f"Request Headers: {request.headers}")
     app.logger.info(f"Request Content-Type: {request.content_type}")
+
+    # Optional: Log raw Authorization header (for diagnostics)
+    auth_header = request.headers.get('Authorization')
+    if not auth_header:
+        app.logger.warning("Missing Authorization header!")
+        return Response(
+            "Authentication required", 401,
+            {'WWW-Authenticate': 'Basic realm="Login Required"'}
+        )
+    else:
+        app.logger.info(f"Raw Authorization header: {auth_header}")
 
     if request.method == 'GET':
         app.logger.info("Camera sent a GET request to /cgi-bin/notify.cgi")

@@ -1,3 +1,4 @@
+import time
 from flask import Flask, request, jsonify, send_from_directory, Response
 from flask_httpauth import HTTPBasicAuth
 from PIL import Image, ImageDraw, ImageFont
@@ -99,6 +100,7 @@ def cgi_notify():
     auth_header = request.headers.get('Authorization')
     if not auth_header:
         app.logger.warning("Missing Authorization header!")
+        time.sleep(2)  # sleep 2 seconds to slow down the client
         return Response(
             "Authentication required", 401,
             {'WWW-Authenticate': 'Basic realm="Login Required"'}
